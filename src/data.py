@@ -25,10 +25,24 @@ def load_wikieval(name, revision, page_text_column):
     return items
 
 
+def load_ragbench(name, revision, subset, split):
+    """RAGBench subset (e.g. expertqa). Each question's documents, joined, play the
+    role of its "page"; they are used as provided, without cleaning."""
+    ds = load_dataset(name, subset, revision=revision, split=split)
+    return [{
+        "qid": qid,
+        "question": row["question"].strip(),
+        "source": row["id"],
+        "page_text": "\n\n".join(row["documents"]),
+    } for qid, row in enumerate(ds)]
+
+
 def load_items(name, **kwargs):
     """Entry point used by the pipeline; picks the loader from the dataset name."""
     if name == "vibrantlabsai/WikiEval":
         return load_wikieval(name, **kwargs)
+    if name == "galileo-ai/ragbench":
+        return load_ragbench(name, **kwargs)
     raise ValueError(f"No loader for dataset {name}")
 
 

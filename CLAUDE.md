@@ -141,6 +141,15 @@ Regras:
 - **Prompt de geração:** `prompts/generation_v1.txt`, na versão aprovada no plano.
 - **Ragas:** 0.4.3, com a Faithfulness de `ragas.metrics.collections`.
 
+### 6.1.1 Teste de viabilidade de base (não é parte do experimento final)
+- **Motivo:** o pilot_v1 com o WikiEval mostrou saturação forte (100% de notas 1,0 no juiz `default`).
+- **Base testada:** RAGBench, subconjunto ExpertQA, split de teste (203 perguntas; `galileo-ai/ragbench`, antes `rungalileo/ragbench`, revisão `97808f3e5fd1`, licença CC-BY-4.0).
+- **Uso dos dados:** só as perguntas e os documentos de cada pergunta, juntados como "texto da página" sem limpeza. As respostas e os rótulos do RAGBench não são usados.
+- **Configuração:** `config/base_test.yaml`, `run_id` `base_test_v1`. Só o gerador aberto (Llama), K=5, as duas configurações do juiz, e o resto idêntico ao piloto. Execução única.
+- **Referências:**
+  - Friel, R.; Belyi, M.; Sanyal, A. *RAGBench: Explainable Benchmark for Retrieval-Augmented Generation Systems*. arXiv:2407.11005, 2024.
+  - Malaviya, C.; Lee, S.; Chen, S.; Sieber, E.; Yatskar, M.; Roth, D. *ExpertQA: Expert-Curated Questions and Attributed Answers*. NAACL 2024. arXiv:2309.07852.
+
 ### 6.2 Pendentes
 - Base de dados final: WikiEval ou perguntas próprias.
 - Parâmetros de recuperação: tamanho do trecho, sobreposição, embedding, base vetorial, k.

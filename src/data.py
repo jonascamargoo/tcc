@@ -25,5 +25,12 @@ def load_wikieval(name, revision, page_text_column):
     return items
 
 
+def load_items(name, **kwargs):
+    """Entry point used by the pipeline; picks the loader from the dataset name."""
+    if name == "vibrantlabsai/WikiEval":
+        return load_wikieval(name, **kwargs)
+    raise ValueError(f"No loader for dataset {name}")
+
+
 def select_qids(n_total, n, seed):
     return sorted(random.Random(seed).sample(range(n_total), n))

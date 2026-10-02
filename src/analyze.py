@@ -112,7 +112,10 @@ def analyze_config(cfg, name, rows, errors, lines):
 
     # --- Experiment 2 ---
     scores = resp.pivot(index="qid", columns="generator", values="mean")
-    excluded = scores[scores.isna().any(axis=1)]
+    # Questions still missing one generator's answer are not NaN exclusions.
+    answered = ev.groupby("qid")["generator"].nunique()
+    missing = scores[scores.index.isin(answered[answered < 2].index)]
+    excluded = scores[~scores.index.isin(missing.index) & scores.isna().any(axis=1)]
     scores = scores.dropna()
     test = paired_test(scores) if len(scores) else {}
     mean_prop, mean_open = scores[PROP].mean(), scores[OPEN].mean()
@@ -125,7 +128,7 @@ def analyze_config(cfg, name, rows, errors, lines):
     agree = paired == direct or (direct == "tie" and paired == "no significant difference")
     pd.DataFrame([{**test, "mean_prop": mean_prop, "mean_open": mean_open,
                    "direct_winner": direct, "paired_conclusion": paired, "agree": agree,
-                   "n_excluded": len(excluded)}]).to_csv(
+                   "n_missing_answer": len(missing), "n_excluded_nan": len(excluded)}]).to_csv(
         result_path("analysis", f"{run}_{name}_exp2.csv"), index=False)
 
     # --- Calls, timing and cache diagnostics ---
@@ -172,7 +175,8 @@ def analyze_config(cfg, name, rows, errors, lines):
                      f"{fmt(resp['sd'].median())}.")
     lines += [
         "\n**Experimento 2 — critério pareado** (só valida o código no piloto; n pequeno)\n",
-        f"- Pares: {test.get('n_pairs', 0)}; excluídos por NaN: {len(excluded)}; "
+        f"- Pares: {test.get('n_pairs', 0)}; perguntas sem resposta de um dos geradores: "
+        f"{len(missing)}; excluídos por NaN: {len(excluded)}; "
         f"d = 0: {test.get('n_zero_d', '—')} (zero_method=wilcox).",
         f"- d mediana {fmt(test.get('median_d'))}, d média {fmt(test.get('mean_d'))}; "
         f"W={fmt(test.get('W'), 1)}, p={fmt(test.get('p'))}, Z={fmt(test.get('z'))}, r={fmt(test.get('r'))}.",

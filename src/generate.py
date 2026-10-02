@@ -6,6 +6,7 @@ Usage: .venv/bin/python src/generate.py --config config/pilot.yaml --generator p
 import argparse
 import hashlib
 import os
+import sys
 import time
 
 from common import (GEMINI_BASE_URL, ROOT, append_jsonl, code_commit, load_config, now,
@@ -15,13 +16,38 @@ from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 
 
+# Gemini retries are handled here instead of by the client: failed requests also
+# count against the free-tier daily quota, so waits are long and a 429 stops the run.
+RETRY_WAITS_S = (120, 240, 480)
+
+
 def make_llm(gen, ollama_url):
     if gen["provider"] == "gemini":
         return ChatOpenAI(model=gen["model"], base_url=GEMINI_BASE_URL,
-                          api_key=os.environ["GEMINI_API_KEY"], **gen["params"])
+                          api_key=os.environ["GEMINI_API_KEY"], max_retries=0,
+                          **gen["params"])
     if gen["provider"] == "ollama":
         return ChatOllama(model=gen["model"], base_url=ollama_url, **gen["params"])
     raise ValueError(f"Unknown provider: {gen['provider']}")
+
+
+def invoke_with_retry(llm, messages):
+    """Return (message, seconds of the successful call, attempts, seconds waited)."""
+    waited = 0
+    for attempt in range(1, len(RETRY_WAITS_S) + 2):
+        t0 = time.perf_counter()
+        try:
+            return llm.invoke(messages), time.perf_counter() - t0, attempt, waited
+        except Exception as e:
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            if status == 429:
+                sys.exit(f"Quota exhausted (429); progress saved. Rerun later. {e}")
+            if status is None or status < 500 or attempt > len(RETRY_WAITS_S):
+                raise
+            wait = RETRY_WAITS_S[attempt - 1]
+            print(f"    HTTP {status}; attempt {attempt} failed, waiting {wait}s")
+            time.sleep(wait)
+            waited += wait
 
 
 def format_context(chunks):
@@ -56,9 +82,7 @@ def main():
     for r in todo:
         messages = template.format_messages(context=format_context(r["chunks"]),
                                             question=r["question"])
-        t0 = time.perf_counter()
-        msg = llm.invoke(messages)
-        elapsed = time.perf_counter() - t0
+        msg, elapsed, attempts, waited = invoke_with_retry(llm, messages)
         meta = msg.response_metadata
         append_jsonl(out, {
             "qid": r["qid"],
@@ -76,6 +100,8 @@ def main():
             "usage": msg.usage_metadata,
             "response_id": msg.id,
             "finish_reason": meta.get("finish_reason") or meta.get("done_reason"),
+            "attempts": attempts,
+            "retry_wait_s": waited,
             "code_commit": commit,
             "timestamp": now(),
             "elapsed_s": round(elapsed, 2),

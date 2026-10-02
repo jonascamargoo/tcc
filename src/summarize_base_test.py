@@ -12,6 +12,7 @@ import pandas as pd
 from common import load_config, read_jsonl, result_path
 
 REFERENCE_RUN = "pilot_v1"
+SD_TOL = 1e-9  # identical scores can give a float SD of ~1e-17
 QUANTILES = [("mín", 0), ("P10", 0.10), ("P25", 0.25), ("mediana", 0.50), ("P75", 0.75),
              ("P90", 0.90), ("máx", 1)]
 
@@ -88,7 +89,7 @@ def main():
             + (f" (qid/j: {list(zip(nan['qid'], nan['j']))}; nenhuma afirmação extraída: "
                f"{(nan['n_statements'] == 0).sum()})" if len(nan) else "") + ".",
             f"- Respostas com DP > 0 entre as {int(ev['j'].max())} repetições: "
-            f"{(per_resp.iloc[:, 1] > 0).sum()}/{len(per_resp)}; DP mediano "
+            f"{(per_resp.iloc[:, 1] > SD_TOL).sum()}/{len(per_resp)}; DP mediano "
             f"{per_resp.iloc[:, 1].median():.3f}, DP máximo {per_resp.iloc[:, 1].max():.3f}.",
             f"- Tempo: total {ev['elapsed_s'].sum() / 60:.1f} min; por avaliação mediana "
             f"{ev['elapsed_s'].median():.1f}s (máx {ev['elapsed_s'].max():.1f}s).",

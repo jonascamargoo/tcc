@@ -1,0 +1,14 @@
+# Python 3.12 (Homebrew python@3.12, pre-existing). Install with:
+#   python3.12 -m venv .venv && .venv/bin/pip install --no-cache-dir -r requirements.txt
+ragas==0.4.3
+langchain-community==0.4.1        # 0.4.2 removed chat_models.vertexai, which ragas 0.4.3 imports
+langchain-core==1.6.6
+langchain-text-splitters==1.1.2
+langchain-huggingface==1.2.2
+langchain-openai==1.6.7
+langchain-ollama==1.1.0
+sentence-transformers==6.1.0
+datasets==5.0.1
+scipy==1.18.1
+pandas==3.0.6
+python-dotenv==1.2.4

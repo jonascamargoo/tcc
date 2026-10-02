@@ -1,0 +1,9 @@
+Answer the question using only the information in the context below.
+If the context does not contain the answer, say that you cannot answer based on the context.
+
+Context:
+{context}
+
+Question: {question}
+
+Answer:

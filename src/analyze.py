@@ -16,6 +16,7 @@ from scipy.stats import wilcoxon
 
 PROP, OPEN = "proprietary", "open"
 ALPHA = 0.05
+SD_TOL = 1e-9  # identical scores can give a float SD of ~1e-17
 
 
 def winner(p, o):
@@ -38,6 +39,8 @@ def per_response(ev):
         s = g["score"].dropna()
         mean = s.mean() if len(s) else math.nan
         sd = s.std(ddof=1) if len(s) >= 2 else math.nan
+        if sd < SD_TOL:
+            sd = 0.0
         rows.append({"qid": qid, "generator": gen, "n_valid": len(s),
                      "n_nan": int(g["score"].isna().sum()), "mean": mean, "sd": sd,
                      "cv": sd / mean if len(s) >= 2 and mean != 0 else math.nan,

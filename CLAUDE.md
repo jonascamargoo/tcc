@@ -150,13 +150,20 @@ Regras:
   - Friel, R.; Belyi, M.; Sanyal, A. *RAGBench: Explainable Benchmark for Retrieval-Augmented Generation Systems*. arXiv:2407.11005, 2024.
   - Malaviya, C.; Lee, S.; Chen, S.; Sieber, E.; Yatskar, M.; Roth, D. *ExpertQA: Expert-Curated Questions and Attributed Answers*. NAACL 2024. arXiv:2309.07852.
 
+### 6.1.2 Piloto v2 no RAGBench–ExpertQA
+- **Decisão do autor (2026-10-05):** depois do teste de viabilidade, o piloto continua no RAGBench–ExpertQA (split de teste) com os dois geradores. O `pilot_v1` (WikiEval) fica registrado como está, com as respostas do Gemini incompletas.
+- **Configuração:** `config/pilot_v2.yaml`, `run_id` `pilot_v2`. Mesmas 10 perguntas (seed 42), K=5, as duas configurações do juiz, e o resto idêntico ao `pilot_v1`.
+- **Análise:** desvios-padrão abaixo de 1e-9 são tratados como 0 (ruído de ponto flutuante quando as K notas são iguais).
+- Uso dos dados e referências: como na 6.1.1.
+
 ### 6.2 Pendentes
-- Base de dados final: WikiEval ou perguntas próprias.
+- Base de dados final: WikiEval, RAGBench–ExpertQA ou perguntas próprias.
 - Parâmetros de recuperação: tamanho do trecho, sobreposição, embedding, base vetorial, k.
 - Valor de K para o experimento final.
 
 ### 6.3 Mudanças a refletir na metodologia do TCC
 - O corpus são os trechos `context_v2` do WikiEval, não as páginas completas.
+- Se o RAGBench–ExpertQA for adotado: o corpus são os documentos de cada pergunta, juntados sem limpeza (com o ruído descrito no resumo do `base_test_v1`), e as respostas e rótulos do RAGBench não são usados.
 - O juiz é local, via Ollama: modelo, quantização Q4_K_M, versão do Ollama e digest do modelo.
 - Seeds por repetição (`seed = j`) e as duas configurações do juiz, reportadas lado a lado.
 - `max_tokens` do juiz = 4096 (no lugar de 1024), com o motivo da 3.4.

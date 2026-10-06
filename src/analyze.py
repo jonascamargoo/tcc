@@ -5,8 +5,8 @@ Usage: .venv/bin/python src/analyze.py --config config/pilot.yaml
 Reads only saved files; makes no model calls. One set of outputs per judge config.
 NaN rule (CLAUDE.md 6.1): response score = mean of valid repetitions; a question is
 dropped from both comparisons when either response has no valid repetition.
-Refusal rule (CLAUDE.md 6.1): an answer that is only the refusal sentence the prompt
-asks for has no Faithfulness score; its pair is dropped from both comparisons and
+Refusal rule (CLAUDE.md 6.1): an answer that starts by declaring it cannot answer has
+no Faithfulness score; its pair is dropped from both comparisons and
 refusals are reported per generator as a separate outcome.
 """
 
@@ -21,13 +21,17 @@ from scipy.stats import wilcoxon
 PROP, OPEN = "proprietary", "open"
 ALPHA = 0.05
 SD_TOL = 1e-9  # identical scores can give a float SD of ~1e-17
-# The refusal sentence of prompts/generation_v1.txt, matched as the whole answer
-# (case, surrounding spaces and a final period ignored). Partial refusals are scored.
-REFUSAL = "i cannot answer based on the context"
+# Refusal rule, applied the same way to both generators: the answer starts by declaring
+# that it cannot answer, provide or verify (e.g. "I cannot answer based on the context.",
+# "I cannot answer that question. However, ..."). Content after the refusal is ignored.
+REFUSAL = re.compile(
+    r"^(based on the (provided |given )?context,\s*)?"
+    r"(i cannot|i can't|i can not|i am unable to|i'm unable to|i am not able to|"
+    r"you cannot|you can't) (answer|provide|verify)\b", re.IGNORECASE)
 
 
 def is_refusal(answer):
-    return re.sub(r"\.$", "", answer.strip()).strip().lower() == REFUSAL
+    return bool(REFUSAL.match(answer.strip()))
 
 
 def winner(p, o):

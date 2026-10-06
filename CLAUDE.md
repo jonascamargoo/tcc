@@ -136,6 +136,13 @@ Regras:
   - Se só parte das K avaliações der NaN, a nota da resposta é a média das válidas, e o número de descartadas fica registrado.
   - Se as K derem NaN, o par sai tanto do Wilcoxon quanto da comparação direta das médias, e quantos saíram (e quais) é reportado.
   - No Exp. 1, o desvio exige pelo menos 2 notas válidas. Na simulação de avaliação única, a pergunta sai só da repetição j em que houver NaN.
+- **Recusas explícitas** (decisão do autor em 2026-10-05, depois do `pilot_v2`):
+  - Uma resposta que consiste só na frase de recusa pedida pelo prompt ("I cannot answer based on the context.", ignorando maiúsculas, espaços e o ponto final) não recebe nota de Faithfulness. Motivo: ela não faz afirmações sobre o conteúdo, mas o juiz a converte numa meta-afirmação e lhe dá 0 (30/30 no `default` e 28/30 no `t1` no `pilot_v2`).
+  - O par sai tanto do Wilcoxon quanto da comparação direta das médias, como no caso de NaN. As avaliações do juiz continuam salvas e são reportadas à parte.
+  - A taxa de recusa por gerador é reportada como desfecho separado.
+  - Meias-recusas (recusa seguida de conteúdo) são avaliadas normalmente. As respostas curtas que não forem classificadas como recusa são listadas para conferência manual.
+  - No Exp. 1, a variação é calculada por resposta e inclui as respostas do outro gerador nesses pares. A simulação de avaliação única usa só os pares sem recusa.
+  - Limitação: os pares que restam tendem a ser as perguntas em que o contexto basta, e a comparação vale para esse subconjunto.
 - **Dados (piloto):** WikiEval, hoje publicado como `vibrantlabsai/WikiEval`. O conjunto não traz as páginas completas, então o corpus usa a coluna `context_v2` das 50 páginas.
 - **Perguntas do piloto:** 10, sorteadas com seed fixa (42), registrada na configuração.
 - **Prompt de geração:** `prompts/generation_v1.txt`, na versão aprovada no plano.
@@ -170,6 +177,7 @@ Regras:
 - Contexto do servidor Ollama fixado em 8192 tokens (`OLLAMA_CONTEXT_LENGTH`).
 - O Experimento 1 mede explicitamente a variação induzida pela amostragem do juiz, em cada configuração.
 - A regra para notas NaN.
+- A regra para recusas explícitas, com a taxa de recusa por gerador como desfecho separado e a limitação de seleção dos pares.
 - A regra de amostragem dos geradores (recomendação do fornecedor, com as fontes da 3.3) e a do juiz (padrão do Ragas mais `t1`, com `seed = j`).
 
 ## 7. Como trabalhar com o autor

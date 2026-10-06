@@ -5,10 +5,14 @@ Usage: .venv/bin/python src/analyze.py --config config/pilot.yaml
 Reads only saved files; makes no model calls. One set of outputs per judge config.
 NaN rule (CLAUDE.md 6.1): response score = mean of valid repetitions; a question is
 dropped from both comparisons when either response has no valid repetition.
+Refusal rule (CLAUDE.md 6.1): an answer that is only the refusal sentence the prompt
+asks for has no Faithfulness score; its pair is dropped from both comparisons and
+refusals are reported per generator as a separate outcome.
 """
 
 import argparse
 import math
+import re
 
 import pandas as pd
 from common import load_config, read_jsonl, result_path
@@ -17,6 +21,13 @@ from scipy.stats import wilcoxon
 PROP, OPEN = "proprietary", "open"
 ALPHA = 0.05
 SD_TOL = 1e-9  # identical scores can give a float SD of ~1e-17
+# The refusal sentence of prompts/generation_v1.txt, matched as the whole answer
+# (case, surrounding spaces and a final period ignored). Partial refusals are scored.
+REFUSAL = "i cannot answer based on the context"
+
+
+def is_refusal(answer):
+    return re.sub(r"\.$", "", answer.strip()).strip().lower() == REFUSAL
 
 
 def winner(p, o):
@@ -82,12 +93,16 @@ def fmt(x, nd=3):
     return "—" if x is None or (isinstance(x, float) and math.isnan(x)) else f"{x:.{nd}f}"
 
 
-def analyze_config(cfg, name, rows, errors, lines):
+def analyze_config(cfg, name, rows, errors, refused, lines):
     run = cfg["run_id"]
-    ev = pd.DataFrame(rows)
-    ev["score"] = ev["score"].astype(float)
-    ev["verdict_list"] = ev["verdicts"].map(lambda v: [x["verdict"] for x in v])
-    K = int(ev["j"].max())
+    ev_all = pd.DataFrame(rows)
+    ev_all["score"] = ev_all["score"].astype(float)
+    ev_all["verdict_list"] = ev_all["verdicts"].map(lambda v: [x["verdict"] for x in v])
+    K = int(ev_all["j"].max())
+    is_ref = [(q, g) in refused for q, g in zip(ev_all["qid"], ev_all["generator"])]
+    ref_ev = ev_all[is_ref]
+    ev = ev_all[[not r for r in is_ref]]  # refusals have no Faithfulness score
+    refused_q = {q for q, _ in refused}
 
     # --- Experiment 1 ---
     resp = per_response(ev)
@@ -117,6 +132,8 @@ def analyze_config(cfg, name, rows, errors, lines):
     scores = resp.pivot(index="qid", columns="generator", values="mean")
     # Questions still missing one generator's answer are not NaN exclusions.
     answered = ev.groupby("qid")["generator"].nunique()
+    refusal_pairs = scores[scores.index.isin(refused_q)]
+    scores = scores[~scores.index.isin(refused_q)]
     missing = scores[scores.index.isin(answered[answered < 2].index)]
     excluded = scores[~scores.index.isin(missing.index) & scores.isna().any(axis=1)]
     scores = scores.dropna()
@@ -131,7 +148,8 @@ def analyze_config(cfg, name, rows, errors, lines):
     agree = paired == direct or (direct == "tie" and paired == "no significant difference")
     pd.DataFrame([{**test, "mean_prop": mean_prop, "mean_open": mean_open,
                    "direct_winner": direct, "paired_conclusion": paired, "agree": agree,
-                   "n_missing_answer": len(missing), "n_excluded_nan": len(excluded)}]).to_csv(
+                   "n_missing_answer": len(missing), "n_excluded_nan": len(excluded),
+                   "n_excluded_refusal": len(refusal_pairs)}]).to_csv(
         result_path("analysis", f"{run}_{name}_exp2.csv"), index=False)
 
     # --- Calls, timing and cache diagnostics ---
@@ -141,12 +159,14 @@ def analyze_config(cfg, name, rows, errors, lines):
 
     lines += [
         f"\n## Configuração do juiz: `{name}`\n",
-        f"- Avaliações salvas: {len(ev)} (K={K}); erros registrados: {len(errors)}.",
+        f"- Avaliações salvas: {len(ev_all)} (K={K}); erros registrados: {len(errors)}; "
+        f"avaliações de recusas, fora das análises: {len(ref_ev)} (notas dadas pelo juiz: "
+        f"{ref_ev['score'].value_counts(dropna=False).sort_index().to_dict()}).",
         f"- Parâmetros efetivamente enviados: temperature {sorted(sent['temperature'].dropna().unique().tolist())}, "
         f"top_p {sorted(sent['top_p'].dropna().unique().tolist())}, seed {sorted(sent['seed'].dropna().unique().tolist())}, "
         f"max_tokens {sorted(sent['max_tokens'].dropna().unique().tolist())}.",
-        f"- Chamadas HTTP ao juiz: {len(calls)} ({len(calls) / len(ev):.2f} por avaliação; "
-        f"{(ev['n_http_calls'] > 2).sum()} avaliações com mais de 2); "
+        f"- Chamadas HTTP ao juiz: {len(calls)} ({len(calls) / len(ev_all):.2f} por avaliação; "
+        f"{(ev_all['n_http_calls'] > 2).sum()} avaliações com mais de 2); "
         f"status ≠ 200: {sum(c['status'] != 200 for c in calls)}; finish_reason: {finish}.",
         # Ollama ids are short random numbers and can collide, so the cache evidence is
         # that every call took real time and generated tokens.
@@ -155,8 +175,9 @@ def analyze_config(cfg, name, rows, errors, lines):
         f"máx. {max(c['usage']['completion_tokens'] for c in calls)} (limite max_tokens "
         f"{int(sent['max_tokens'].max())}); tokens de prompt máx. "
         f"{max(c['usage']['prompt_tokens'] for c in calls)} (contexto {cfg['ollama_context_length']}).",
-        f"- Tempo por avaliação: mediana {ev['elapsed_s'].median():.1f}s, total {ev['elapsed_s'].sum() / 60:.1f} min.",
-        f"- Saturação: {(ev['score'] == 1).mean():.0%} das notas = 1,0; notas NaN: {ev['score'].isna().sum()}.",
+        f"- Tempo por avaliação: mediana {ev_all['elapsed_s'].median():.1f}s, total {ev_all['elapsed_s'].sum() / 60:.1f} min.",
+        f"- Saturação (sem recusas): {(ev['score'] == 1).mean():.0%} das notas = 1,0; "
+        f"notas NaN: {ev['score'].isna().sum()}.",
         f"- Respostas cujas afirmações variam entre as repetições: {resp['statements_vary'].sum()}/{len(resp)}; "
         f"cujos veredictos variam: {resp['verdicts_vary'].sum()}/{len(resp)}.",
         "\n**Experimento 1 — variação do juiz**\n",
@@ -179,7 +200,7 @@ def analyze_config(cfg, name, rows, errors, lines):
     lines += [
         "\n**Experimento 2 — critério pareado** (só valida o código no piloto; n pequeno)\n",
         f"- Pares: {test.get('n_pairs', 0)}; perguntas sem resposta de um dos geradores: "
-        f"{len(missing)}; excluídos por NaN: {len(excluded)}; "
+        f"{len(missing)}; excluídos por recusa: {len(refusal_pairs)}; excluídos por NaN: {len(excluded)}; "
         f"d = 0: {test.get('n_zero_d', '—')} (zero_method=wilcox).",
         f"- d mediana {fmt(test.get('median_d'))}, d média {fmt(test.get('mean_d'))}; "
         f"W={fmt(test.get('W'), 1)}, p={fmt(test.get('p'))}, Z={fmt(test.get('z'))}, r={fmt(test.get('r'))}.",
@@ -211,21 +232,31 @@ def main():
         lines.append(f"- Perguntas: {len(ret)}; trechos indexados: {ret[0]['n_chunks_indexed']}; "
                      f"recuperação com trecho da própria página: "
                      f"{sum(r['same_page_hit'] for r in ret)}/{len(ret)}.")
+    refused = set()
     for gen in cfg["generation"]["generators"]:
         g = pd.DataFrame(read_jsonl(result_path("generation", f"{run}_{gen}.jsonl")))
         if g.empty:
             continue
+        ref = g[g["answer"].map(is_refusal)]
+        refused |= {(q, gen) for q in ref["qid"]}
+        short = g[~g["answer"].map(is_refusal) & (g["answer"].str.len() < 150)]
         tokens = g["usage"].map(lambda u: (u or {}).get("output_tokens") or 0)
         lines.append(f"- Gerador {gen} ({g['model'].iloc[0]}): {len(g)} respostas; tempo "
                      f"mediano {g['elapsed_s'].median():.1f}s (total {g['elapsed_s'].sum() / 60:.1f} min); "
                      f"tokens de saída medianos {int(tokens.median())}; finish_reason "
                      f"{g['finish_reason'].value_counts().to_dict()}.")
+        lines.append(f"  - Recusas explícitas: {len(ref)}/{len(g)} (qids {ref['qid'].tolist()}); "
+                     f"respostas curtas (< 150 caracteres) não classificadas como recusa, para "
+                     f"conferência manual: {dict(zip(short['qid'], short['answer']))}.")
+    refused_q = sorted({q for q, _ in refused})
+    lines.append(f"- Perguntas com recusa de algum gerador (pares fora da Faithfulness): "
+                 f"{len(refused_q)} {refused_q}.")
 
     for name in cfg["evaluation"]["configs"]:
         rows = read_jsonl(result_path("evaluation", f"{run}_{name}.jsonl"))
         errors = read_jsonl(result_path("evaluation", f"{run}_{name}_errors.jsonl"))
         if rows:
-            analyze_config(cfg, name, rows, errors, lines)
+            analyze_config(cfg, name, rows, errors, refused, lines)
 
     out = result_path("analysis", f"{run}_summary.md")
     out.write_text("\n".join(lines) + "\n")

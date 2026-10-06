@@ -198,7 +198,8 @@ def analyze_config(cfg, name, rows, errors, refused, lines):
         lines.append(f"- DP mediano com j=1..3: {fmt(sd_k3.median())} vs com j=1..{K}: "
                      f"{fmt(resp['sd'].median())}.")
     lines += [
-        "\n**Experimento 2 — critério pareado** (só valida o código no piloto; n pequeno)\n",
+        "\n**Experimento 2 — critério pareado**"
+        + (" (só valida o código no piloto; n pequeno)" if run.startswith("pilot") else "") + "\n",
         f"- Pares: {test.get('n_pairs', 0)}; perguntas sem resposta de um dos geradores: "
         f"{len(missing)}; excluídos por recusa: {len(refusal_pairs)}; excluídos por NaN: {len(excluded)}; "
         f"d = 0: {test.get('n_zero_d', '—')} (zero_method=wilcox).",

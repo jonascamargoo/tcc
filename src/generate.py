@@ -6,6 +6,7 @@ Usage: .venv/bin/python src/generate.py --config config/pilot.yaml --generator p
 import argparse
 import hashlib
 import os
+import re
 import sys
 import time
 
@@ -41,6 +42,9 @@ def invoke_with_retry(llm, messages):
         except Exception as e:
             status = getattr(getattr(e, "response", None), "status_code", None)
             if status == 429:
+                # The error says when the quota resets; run_final.sh sleeps until then.
+                delay = re.search(r"'retryDelay': '(\d+)s'", str(e))
+                print(f"RETRY_AFTER_S={delay.group(1) if delay else 3600}", flush=True)
                 sys.exit(f"Quota exhausted (429); progress saved. Rerun later. {e}")
             if status is None or status < 500 or attempt > len(RETRY_WAITS_S):
                 raise

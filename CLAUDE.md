@@ -19,6 +19,8 @@ O resultado principal é o **critério de comparação**, não "qual gerador é 
 
 ## 2. Fase atual: PILOTO
 
+> **Atualização (2026-10-05):** o piloto terminou (`pilot_v1`, `base_test_v1`, `pilot_v2`), e o experimento final foi congelado e iniciado (seção 6.1.3). Esta seção fica como registro do piloto.
+
 Ainda não é o experimento completo. O piloto serve para preencher decisões pendentes da metodologia antes da execução final.
 
 **Escopo do piloto:** 5 a 10 perguntas, os dois geradores, K entre 3 e 5.
@@ -163,20 +165,32 @@ Regras:
 - **Análise:** desvios-padrão abaixo de 1e-9 são tratados como 0 (ruído de ponto flutuante quando as K notas são iguais).
 - Uso dos dados e referências: como na 6.1.1.
 
+### 6.1.3 Experimento final (congelado em 2026-10-05)
+- **Configuração:** `config/final.yaml`, `run_id` `final_v1`. É idêntica ao `pilot_v2`, exceto pelo número de perguntas.
+- **Base:** RAGBench–ExpertQA, split de teste, todas as 203 perguntas (dados e referências como na 6.1.1).
+- **Recuperação:** os valores do piloto. Trechos de 1000 caracteres com sobreposição de 200, `BAAI/bge-small-en-v1.5`, `InMemoryVectorStore` e k = 4. O índice tem as 203 perguntas, e os documentos das outras perguntas servem de distratores.
+- **Prompt:** `prompts/generation_v1.txt`, sem alterações. As recusas seguem a regra da 6.1.
+- **K = 5,** nas duas configurações do juiz. O juiz roda em paralelo à coleta do Gemini e não está no caminho crítico, então K = 5 não atrasa o fim do experimento.
+- **Execução:** `src/run_final.sh`, que roda o Gemini e o juiz em laços independentes.
+  - O laço do Gemini usa a cota diária do free tier e dorme até o `retryDelay` informado no erro 429. Estimativa de 10 a 18 dias, porque os erros 503 também consomem a cota.
+  - O progresso é acompanhado com `src/progress.py`, que mostra só contagens, recusas, erros e versões, sem médias nem vencedores.
+  - Os dois laços retomam do ponto em que pararam se forem reiniciados.
+  - O Mac precisa ficar na tomada e com a tampa aberta, porque o `caffeinate -s` só impede o sono na tomada.
+- **Checkpoint de viabilidade depois de 2 ou 3 dias:** taxa de recusa, erros, NaN, pares úteis e versão do Gemini. Ele não olha notas.
+- **Regra de congelamento:** qualquer mudança em base, perguntas, recuperação, prompt ou parâmetros dos geradores exige um novo `run_id` e refazer a geração. Mudanças no juiz, no K ou nas análises não exigem novas chamadas ao Gemini.
+
 ### 6.2 Pendentes
-- Base de dados final: WikiEval, RAGBench–ExpertQA ou perguntas próprias.
-- Parâmetros de recuperação: tamanho do trecho, sobreposição, embedding, base vetorial, k.
-- Valor de K para o experimento final.
+- Nenhuma decisão de desenho pendente para a coleta. As regras de análise podem ser ajustadas depois, sem novas chamadas.
 
 ### 6.3 Mudanças a refletir na metodologia do TCC
-- O corpus são os trechos `context_v2` do WikiEval, não as páginas completas.
-- Se o RAGBench–ExpertQA for adotado: o corpus são os documentos de cada pergunta, juntados sem limpeza (com o ruído descrito no resumo do `base_test_v1`), e as respostas e rótulos do RAGBench não são usados.
+- Base final: RAGBench–ExpertQA (split de teste, 203 perguntas) no lugar do WikiEval. O piloto no WikiEval mostrou saturação (seção 6.1.1). O corpus são os documentos de cada pergunta, juntados sem limpeza (com o ruído descrito no resumo do `base_test_v1`), e as respostas e rótulos do RAGBench não são usados.
 - O juiz é local, via Ollama: modelo, quantização Q4_K_M, versão do Ollama e digest do modelo.
 - Seeds por repetição (`seed = j`) e as duas configurações do juiz, reportadas lado a lado.
 - `max_tokens` do juiz = 4096 (no lugar de 1024), com o motivo da 3.4.
 - Contexto do servidor Ollama fixado em 8192 tokens (`OLLAMA_CONTEXT_LENGTH`).
 - O Experimento 1 mede explicitamente a variação induzida pela amostragem do juiz, em cada configuração.
 - A regra para notas NaN.
+- Parâmetros de recuperação finais (6.1.3) e o Gemini coletado ao longo de vários dias no free tier, com a versão do modelo registrada em cada resposta.
 - A regra para recusas explícitas, com a taxa de recusa por gerador como desfecho separado e a limitação de seleção dos pares.
 - A regra de amostragem dos geradores (recomendação do fornecedor, com as fontes da 3.3) e a do juiz (padrão do Ragas mais `t1`, com `seed = j`).
 

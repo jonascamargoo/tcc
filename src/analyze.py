@@ -136,7 +136,8 @@ def analyze_config(cfg, name, rows, errors, refused, lines):
     scores = resp.pivot(index="qid", columns="generator", values="mean")
     # Questions still missing one generator's answer are not NaN exclusions.
     answered = ev.groupby("qid")["generator"].nunique()
-    refusal_pairs = scores[scores.index.isin(refused_q)]
+    # Counted from the answers: when both generators refused, the question has no score row.
+    refusal_pairs = sorted(refused_q)
     scores = scores[~scores.index.isin(refused_q)]
     missing = scores[scores.index.isin(answered[answered < 2].index)]
     excluded = scores[~scores.index.isin(missing.index) & scores.isna().any(axis=1)]

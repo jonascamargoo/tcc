@@ -138,6 +138,7 @@ Regras:
   - Se só parte das K avaliações der NaN, a nota da resposta é a média das válidas, e o número de descartadas fica registrado.
   - Se as K derem NaN, o par sai tanto do Wilcoxon quanto da comparação direta das médias, e quantos saíram (e quais) é reportado.
   - No Exp. 1, o desvio exige pelo menos 2 notas válidas. Na simulação de avaliação única, a pergunta sai só da repetição j em que houver NaN.
+- **Falha persistente do juiz** (decisão do autor em 2026-10-06): uma avaliação que falha (por exemplo, JSON inválido depois das retentativas do Ragas) fica registrada em `<run>_<config>_errors.jsonl` e é tentada de novo uma vez. Se falhar de novo, ela conta como repetição sem nota válida, com a mesma regra do NaN parcial (média das repetições válidas), e é reportada como "falha de formato do juiz".
 - **Recusas explícitas** (decisão do autor em 2026-10-05, depois do `pilot_v2`):
   - Uma resposta é recusa quando começa declarando que não pode responder, fornecer ou verificar. O padrão é fixo (`REFUSAL` em `src/analyze.py`) e é aplicado igualmente aos dois geradores. Exemplos: "I cannot answer based on the context.", "Based on the context, I cannot answer…", "I cannot provide medical advice…". Uma recusa não recebe nota de Faithfulness, mesmo que venha conteúdo depois dela.
   - Motivo: a recusa não faz afirmações sobre o conteúdo, mas o juiz a converte numa meta-afirmação e lhe dá 0 (30/30 no `default` e 28/30 no `t1` no `pilot_v2`).

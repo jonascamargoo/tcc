@@ -179,6 +179,7 @@ Regras:
   - O progresso é acompanhado com `src/progress.py`, que mostra só contagens, recusas, erros e versões, sem médias nem vencedores.
   - Os dois laços retomam do ponto em que pararam se forem reiniciados.
   - O Mac precisa ficar na tomada e com a tampa aberta, porque o `caffeinate -s` só impede o sono na tomada.
+- **Faturamento do Gemini (2026-10-06):** o autor adicionou crédito pré-pago à chave. As 3 primeiras respostas (qids 0–2) vieram do free tier e as demais do tier pago, com o mesmo modelo e os mesmos parâmetros. O custo estimado é de ~US$ 0,0025 por resposta: ~700 tokens de entrada a US$ 0,75/M e ~520 de saída, com o thinking, a US$ 3,75/M (preços de https://ai.google.dev/gemini-api/docs/pricing, acessado em 2026-10-06). A geração restante rodou de uma vez com `src/generate.py` (log em `logs/final_v1_gemini_paid.log`).
 - **Checkpoint de viabilidade depois de 2 ou 3 dias:** taxa de recusa, erros, NaN, pares úteis e versão do Gemini. Ele não olha notas.
 - **Regra de congelamento:** qualquer mudança em base, perguntas, recuperação, prompt ou parâmetros dos geradores exige um novo `run_id` e refazer a geração. Mudanças no juiz, no K ou nas análises não exigem novas chamadas ao Gemini.
 
@@ -193,7 +194,7 @@ Regras:
 - Contexto do servidor Ollama fixado em 8192 tokens (`OLLAMA_CONTEXT_LENGTH`).
 - O Experimento 1 mede explicitamente a variação induzida pela amostragem do juiz, em cada configuração.
 - A regra para notas NaN.
-- Parâmetros de recuperação finais (6.1.3) e o Gemini coletado ao longo de vários dias no free tier, com a versão do modelo registrada em cada resposta.
+- Parâmetros de recuperação finais (6.1.3). O Gemini foi acessado no free tier (3 respostas) e no tier pago (as demais), com o mesmo modelo, e a versão do modelo está registrada em cada resposta.
 - A regra para recusas explícitas, com a taxa de recusa por gerador como desfecho separado e a limitação de seleção dos pares.
 - A regra de amostragem dos geradores (recomendação do fornecedor, com as fontes da 3.3) e a do juiz (padrão do Ragas mais `t1`, com `seed = j`).
 

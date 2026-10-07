@@ -162,8 +162,15 @@ def analyze_config(cfg, name, rows, errors, refused, lines):
     sent = pd.DataFrame([c["sent"] for c in calls])
     finish = pd.Series([c["finish_reason"] for c in calls]).value_counts().to_dict()
 
+    # Failed evaluations never saved: repetitions without a valid score (CLAUDE.md 6.1).
+    saved = set(zip(ev_all["qid"], ev_all["generator"], ev_all["j"]))
+    failed = sorted({(e["qid"], e["generator"], e["j"]) for e in errors} - saved)
+    failed_usable = [f for f in failed if f[0] not in refused_q]
+
     lines += [
         f"\n## Configuração do juiz: `{name}`\n",
+        f"- Falhas de formato do juiz (sem nota válida após nova tentativa): {len(failed)} "
+        f"avaliações {failed}; {len(failed_usable)} em pares sem recusa {failed_usable}.",
         f"- Avaliações salvas: {len(ev_all)} (K={K}); erros registrados: {len(errors)}; "
         f"avaliações de recusas, fora das análises: {len(ref_ev)} (notas dadas pelo juiz: "
         f"{ref_ev['score'].value_counts(dropna=False).sort_index().to_dict()}).",

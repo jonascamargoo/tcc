@@ -11,6 +11,7 @@ import asyncio
 import json
 import math
 import time
+from collections import Counter
 
 import httpx
 from common import (ROOT, append_jsonl, code_commit, load_config, now, ollama_info,
@@ -62,6 +63,9 @@ async def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", required=True)
     parser.add_argument("--judge-config", required=True)
+    # CLAUDE.md 6.1: a failed evaluation is retried once; after 2 failures it counts as a
+    # repetition without a valid score ("judge format failure").
+    parser.add_argument("--max-failures", type=int, default=2)
     args = parser.parse_args()
 
     cfg = load_config(args.config)
@@ -78,9 +82,12 @@ async def main():
     out = result_path("evaluation", f"{run}_{args.judge_config}.jsonl")
     errors = result_path("evaluation", f"{run}_{args.judge_config}_errors.jsonl")
     done = {(r["qid"], r["generator"], r["j"]) for r in read_jsonl(out)}
+    failures = Counter((r["qid"], r["generator"], r["j"]) for r in read_jsonl(errors))
+    given_up = {k for k, n in failures.items() if n >= args.max_failures and k not in done}
     todo = [(a, j) for a in answers for j in range(1, ev["K"] + 1)
-            if (a["qid"], a["generator"], j) not in done]
-    print(f"Judge config '{args.judge_config}': {len(done)} done, {len(todo)} to do")
+            if (a["qid"], a["generator"], j) not in done | given_up]
+    print(f"Judge config '{args.judge_config}': {len(done)} done, {len(todo)} to do, "
+          f"{len(given_up)} given up after {args.max_failures} failures {sorted(given_up)}")
     if not todo:
         return
 

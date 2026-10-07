@@ -181,6 +181,7 @@ Regras:
   - Os dois laços retomam do ponto em que pararam se forem reiniciados.
   - O Mac precisa ficar na tomada e com a tampa aberta, porque o `caffeinate -s` só impede o sono na tomada.
 - **Faturamento do Gemini (2026-10-06):** o autor adicionou crédito pré-pago à chave. As 3 primeiras respostas (qids 0–2) vieram do free tier e as demais do tier pago, com o mesmo modelo e os mesmos parâmetros. O custo estimado é de ~US$ 0,0025 por resposta: ~700 tokens de entrada a US$ 0,75/M e ~520 de saída, com o thinking, a US$ 3,75/M (preços de https://ai.google.dev/gemini-api/docs/pricing, acessado em 2026-10-06). A geração restante rodou de uma vez com `src/generate.py` (log em `logs/final_v1_gemini_paid.log`).
+- **Conclusão (2026-10-07):** 203 respostas por gerador; juiz `default` 2030/2030 avaliações e `t1` 2022/2030. As 8 do `t1` que faltam são falhas de formato do juiz que se repetiram na nova tentativa (regra da 6.1, `--max-failures 2` em `src/evaluate.py`). Resumo em `results/analysis/final_v1_summary.md` e notas manuais (conferência da regra de recusa, falhas) em `final_v1_notes.md`.
 - **Checkpoint de viabilidade depois de 2 ou 3 dias:** taxa de recusa, erros, NaN, pares úteis e versão do Gemini. Ele não olha notas.
 - **Regra de congelamento:** qualquer mudança em base, perguntas, recuperação, prompt ou parâmetros dos geradores exige um novo `run_id` e refazer a geração. Mudanças no juiz, no K ou nas análises não exigem novas chamadas ao Gemini.
 

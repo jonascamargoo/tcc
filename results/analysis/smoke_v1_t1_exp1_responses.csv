@@ -1,0 +1,3 @@
+qid,generator,n_valid,n_nan,mean,sd,cv,statements_vary,verdicts_vary
+40,open,2,0,1.0,0.0,0.0,True,False
+40,proprietary,2,0,1.0,0.0,0.0,True,False

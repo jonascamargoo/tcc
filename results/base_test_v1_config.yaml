@@ -1,0 +1,44 @@
+# Dataset feasibility test (not part of the final experiment): RAGBench-ExpertQA,
+# open generator only. Everything except the dataset matches config/pilot.yaml.
+# Results are never overwritten: a new run needs a new run_id.
+run_id: base_test_v1
+
+ollama_url: http://localhost:11434
+# Server started as: OLLAMA_MODELS=$PWD/.ollama-models OLLAMA_CONTEXT_LENGTH=8192 ollama serve
+ollama_context_length: 8192
+
+dataset:
+  name: galileo-ai/ragbench             # formerly rungalileo/ragbench
+  revision: 97808f3e5fd16ede40bbff6c2949af8139b2eb7b
+  subset: expertqa
+  split: test                           # 203 questions; each question's documents form its "page"
+
+questions:
+  n: 10
+  seed: 42                              # random.Random(seed).sample(range(203), n)
+
+retrieval:
+  chunk_size: 1000                      # characters
+  chunk_overlap: 200
+  embedding_model: BAAI/bge-small-en-v1.5
+  k: 4
+
+generation:
+  prompt_file: prompts/generation_v1.txt
+  # Each generator uses its vendor's recommended sampling (CLAUDE.md 3.3).
+  # Only the open generator is listed here: Gemini is not called in this test.
+  generators:
+    open:
+      provider: ollama
+      model: llama3.1:8b-instruct-q8_0
+      params: {temperature: 0.6, top_p: 0.9, seed: 0, num_ctx: 8192}
+
+evaluation:
+  judge_model: mistral-small3.2:24b-instruct-2506-q4_K_M
+  K: 5
+  # Judge sampling follows the Ragas defaults (CLAUDE.md 3.4); seed = j is added per
+  # repetition. max_tokens is raised from the Ragas default (1024) to 4096 so long answers
+  # (more statements) are not truncated in the verdict call.
+  configs:
+    default: {max_tokens: 4096}         # Ragas 0.4.3 sampling: temperature 0.01, top_p 0.1
+    t1: {temperature: 1.0, top_p: 1.0, max_tokens: 4096}

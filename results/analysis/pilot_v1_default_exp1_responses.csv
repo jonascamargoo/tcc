@@ -1,0 +1,15 @@
+qid,generator,n_valid,n_nan,mean,sd,cv,statements_vary,verdicts_vary
+1,open,5,0,1.0,0.0,0.0,False,False
+1,proprietary,5,0,1.0,0.0,0.0,False,False
+5,open,5,0,1.0,0.0,0.0,False,False
+5,proprietary,5,0,1.0,0.0,0.0,False,False
+6,open,5,0,1.0,0.0,0.0,False,False
+6,proprietary,5,0,1.0,0.0,0.0,False,False
+7,open,5,0,1.0,0.0,0.0,False,False
+7,proprietary,5,0,1.0,0.0,0.0,False,False
+8,open,5,0,1.0,0.0,0.0,False,False
+14,open,5,0,1.0,0.0,0.0,False,False
+15,open,5,0,1.0,0.0,0.0,False,False
+17,open,5,0,1.0,0.0,0.0,False,False
+34,open,5,0,1.0,0.0,0.0,False,False
+40,open,5,0,1.0,0.0,0.0,False,False

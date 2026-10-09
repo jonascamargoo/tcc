@@ -1,0 +1,2 @@
+n_pairs,n_zero_d,n_used,zero_method,median_d,mean_d,W,p,z,r,mean_prop,mean_open,direct_winner,paired_conclusion,agree,n_excluded
+1,1,0,wilcox,0.0,0.0,,,,,1.0,1.0,tie,no significant difference,True,0

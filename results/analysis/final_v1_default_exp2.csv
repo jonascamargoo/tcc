@@ -1,0 +1,2 @@
+n_pairs,n_zero_d,n_used,zero_method,median_d,mean_d,W,p,z,r,mean_prop,mean_open,direct_winner,paired_conclusion,agree,n_missing_answer,n_excluded_nan,n_excluded_refusal
+74,47,27,wilcox,0.0,0.03089842165929122,84.0,0.011603087892440205,-2.5239910613100696,0.4857423062265259,0.9838117620726318,0.9529133404133403,proprietary,proprietary,True,0,0,129

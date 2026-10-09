@@ -219,3 +219,6 @@ __marimo__/
 
 # Projeto: modelos locais do Ollama (ver INSTALACOES.md)
 .ollama-models/
+
+# macOS
+.DS_Store

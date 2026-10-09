@@ -1,0 +1,6 @@
+j,n_questions,mean_prop,mean_open,winner
+1,4,1.0,1.0,tie
+2,4,1.0,0.875,proprietary
+3,4,0.8958333333333334,1.0,open
+4,4,0.9583333333333334,1.0,open
+5,4,1.0,0.9772727272727273,proprietary
